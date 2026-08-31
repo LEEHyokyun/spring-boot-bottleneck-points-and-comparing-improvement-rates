@@ -48,7 +48,7 @@ k6 ──────────────► Spring Boot ──────�
                          [ Load Test Pipeline ]
 ┌─────────────┐          ┌──────────────────┐
 │     k6      │─────────►│    L7 Gateway    │
-│ 1,000 TPS   │          │     Nginx        │
+│ 1,000 RPS   │          │     Nginx        │
 └─────────────┘          └────────┬─────────┘
                                   │
                                   │ HTTP
@@ -145,13 +145,13 @@ JVM Memory부터 Tomcat Thread, HTTP Request에 대한 Server Latency를 직접�
 ## 2-3. DB(MySQL_Exporter) : 별도 메트릭 수집을 통한 전체 DB Workload 및 개별적인 Query Latency
 
 | 메트릭               | 의미                | 성능 분석             |
-| ----------------- | ----------------- | ----------------- |
+| ----------------- | ----------------- |-------------------|
 | CPU               | MySQL 서버 CPU      | DB CPU 병목         |
 | Connections       | 현재 연결 수           | DB connection 사용량 |
 | Threads Connected | 연결된 client thread | Connection 규모     |
 | Threads Running   | 현재 실행 중인 thread   | 실제 DB 작업량         |
 | Queries           | 누적 query 수        | Query 처리량 계산      |
-| Queries/sec       | 초당 query 처리량      | **DB TPS**        |
+| Queries/sec       | 초당 query 처리량      | **DB RPS**        |
 | Slow Queries      | 느린 query 수        | SQL 성능 문제         |
 | InnoDB Row Lock   | row lock 관련 지표    | Lock 병목           |
 | Buffer Pool       | InnoDB cache 사용   | 메모리/cache 상태      |
@@ -202,7 +202,7 @@ Tomcat Thread 및 Hikari Pool 점유율이 높아지고 DB Connection을 위한 
 
 ```scss
 k6
-1,000 TPS
+1,000 RPS
 │
 ▼
 L7
@@ -233,7 +233,7 @@ DB의 병목은 Nginx(L7) 및 WAS 계층에서의 수치를 악화시킬 수 있
 
 ```scss
 k6
-1,000 TPS
+1,000 RPS
       │
       ▼
       L7
@@ -262,7 +262,7 @@ WAS의 포화로 인해 DB 계층까지 처리가 이어지지 않아 DB의 모�
 
 ```scss
 k6
-1,000 TPS
+1,000 RPS
 │
 ▼
 L7
