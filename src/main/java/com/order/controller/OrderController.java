@@ -1,6 +1,6 @@
-package com.bottleneck.points.order.controller;
+package com.order.controller;
 
-import com.bottleneck.points.order.service.OrderService;
+import com.order.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 

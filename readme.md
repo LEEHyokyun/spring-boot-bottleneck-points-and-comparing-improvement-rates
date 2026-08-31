@@ -161,13 +161,13 @@ JVM Memory부터 Tomcat Thread, HTTP Request에 대한 Server Latency를 직접�
 WAS와 DB에서의 트랜잭션 처리량 및 이로 인한 Connection 점유율 및 실행 Query 수를 측정할 수 있다.<br/>
 개별적인 Query 실행에 대한 세부 계획은 Query Explain 및 Index 구조 통해 확인하여, 특정 Query에 대한 성능 개선점을 도출할 수 있다.
 
-## 3. 1,000 TPS에 대한 정상 상태를 표준적 자원 상태에 기반하여 Abnormally/Subnormally/normally 정립
+## 3. Normal 상태를 표준적 자원 상태에 기반하여 Abnormally/Subnormally 정립
 
-10,000 Concurrent가 하루종일 Active하게 사용하여, 1,000 TPS 규모의 트래픽이 발생하였다고 가정하자.
+1,000 RPS 규모의 트래픽이 발생하였다고 가정하자.
 
 ```scss
 k6
-1,000 TPS
+1,000 RPS
 │
 ▼
 L7

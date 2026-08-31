@@ -1,4 +1,4 @@
-package com.bottleneck.points.order.service;
+package com.order.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
