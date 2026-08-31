@@ -1,3 +1,8 @@
+**자세한 내용은 벨로그를 통해 자세히 기술 :**
+- [모니터링 시리즈 #1](https://velog.io/@gyrbs22/%EB%B0%B1%EC%97%94%EB%93%9C-%EC%8B%9C%EC%8A%A4%ED%85%9C%EA%B3%BC-%EA%B0%80%EC%9E%A5-%EA%B0%95%EB%A0%A5%ED%95%9C-%EC%83%81%ED%98%B8%EC%9E%91%EC%9A%A9-%EB%B0%A9%EC%95%88-Logging%EC%97%90-%EB%8C%80%ED%95%98%EC%97%ACSystem-Interaction%EC%9D%98-%EA%B4%80%EC%A0%90%EC%97%90%EC%84%9C)
+- [모니터링 시리즈 #2](https://velog.io/@gyrbs22/%EB%B0%B1%EC%97%94%EB%93%9C-%EC%8B%9C%EC%8A%A4%ED%85%9C%EA%B3%BC-%EA%B0%80%EC%9E%A5-%EC%89%BD%EA%B3%A0-%EA%B0%95%EB%A0%A5%ED%95%98%EA%B2%8C-%EC%83%81%ED%98%B8%EC%9E%91%EC%9A%A9-%ED%95%A0-%EC%88%98-%EC%9E%88%EB%8A%94-%EB%B0%A9%EB%B2%95-2-%EB%AA%A8%EB%8B%88%ED%84%B0%EB%A7%81%EC%97%90-%EB%8C%80%ED%95%9C-%EA%B3%A0%EC%B0%B0)
+- [모니터링 시리즈 #3](https://velog.io/@gyrbs22/%EB%B0%B1%EC%97%94%EB%93%9C-%EC%8B%9C%EC%8A%A4%ED%85%9C%EA%B3%BC-%EA%B0%80%EC%9E%A5-%EC%89%BD%EA%B3%A0-%EA%B0%95%EB%A0%A5%ED%95%98%EA%B2%8C-%EC%83%81%ED%98%B8%EC%9E%91%EC%9A%A9-%ED%95%A0-%EC%88%98-%EC%9E%88%EB%8A%94-%EB%B0%A9%EB%B2%95-3-%EB%AA%A8%EB%8B%88%ED%84%B0%EB%A7%81-%EA%B7%B8%EB%A6%AC%EA%B3%A0-%EB%B3%91%EB%AA%A9%ED%95%B4%EC%86%8C%EC%9D%98-%EA%B4%80%EC%A0%901000-TPS-%ED%99%98%EA%B2%BD%EC%9D%84-%EA%B0%80%EC%A0%95%ED%95%98%EC%97%AC-L7DBWAS-level%EC%97%90%EC%84%9C-%EB%8B%A4%EC%96%91%ED%95%9C-%EB%B3%91%EB%AA%A9-%EC%9B%90%EC%9D%B8%EC%9D%84-%EB%B6%84%EC%84%9D%ED%95%98%EA%B3%A0-%EA%B0%81-%EC%A7%80%EC%A0%90%EC%97%90-%EC%A0%81%EC%9A%A9%ED%95%9C-%EA%B0%9C%EC%84%A0-%EB%B0%A9%EC%95%88%EA%B0%9C%EC%84%A0%EB%A5%A0-%EB%B9%84%EA%B5%90-Series2%EA%B0%9C%EC%84%A0%EC%A0%90-%EC%A0%81%EC%9A%A9%EA%B3%BC-%EA%B0%9C%EC%84%A0%EB%A5%A0-%EB%B9%84%EA%B5%90)
+
 ## 1. 개요
 
 > 모니터링은 숫자가 아니라 해석이다.
@@ -60,7 +65,8 @@ k6 ──────────────► Spring Boot ──────�
                                           └──────────────────┘
 ```
 
-위와 같이 load test 파이프라인을 구축하여 다양한 계층에서 병목 원인을 파악하고 개선점을 적용한다.
+위와 같이 load test 파이프라인을 구축하여 다양한 계층에서 병목 원인을 파악하고 개선점을 적용한다.<br/>
+(*Local test 환경을 도커 기반으로 진행하므로, Nginx 및 MySQL의 경우 Exporter가 Container를 거쳐 Grafana까지 도달하는 체계를 별도 구축해야 한다.)
 
 ```scss
 ─────── [ 메트릭 수집 경로 ] ───────
@@ -90,7 +96,7 @@ k6 ──────────────► Spring Boot ──────�
     └─────────────┘   └───────────────┘   └──────────────────┘
 ```
 
-이를 기반으로 각 메트릭 수집 계층 지정의 목적과 역할에 대해 정리한다.
+이를 기반으로 각 메트릭 수집 계층 지정의 목적과 역할에 대해 아래와 같이 정리한다.
 
 | 계층             | 수집 방식                   | 핵심 지표                                                        | 목적              |
 | -------------- | ----------------------- | ------------------------------------------------------------ | --------------- |
@@ -273,5 +279,3 @@ DB
 CPU = 20%
 Queries/sec ↓
 ```
-
-## 3-3. 
