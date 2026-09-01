@@ -289,4 +289,4 @@ Queries/sec ↓
 
 ## Additional
 
-테스트 데이터 삽입을 위해 Instancio를 활용하고, 이에 대한 테스트 코드는 Job 통합테스트 로직으로 작성한다.
+테스트 데이터 삽입을 위해 Batch+Instancio를 활용하고, 이에 대한 테스트 코드는 Job 통합테스트 로직으로 작성한다.
