@@ -286,3 +286,7 @@ Queries/sec ↓
 
 자원 허용량에 근접하면 처리 지연이 발생하고, 자원 포화도는 그만큼 증가한다(Saturation).<br/>
 따라서, 각 컨테이너가 CPU/Memory/Network/Disk 등의 자원을 얼마나 사용하고 있는지 cAdvisor를 통해 확인한다.
+
+## Additional
+
+테스트 데이터 삽입을 위해 Instancio를 활용하고, 이에 대한 테스트 코드는 Job 통합테스트 로직으로 작성한다.

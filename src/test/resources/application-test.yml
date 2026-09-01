@@ -1,6 +1,7 @@
 spring:
   jpa:
-
+    hibernate:
+      ddl-auto: create-drop
     properties:
       hibernate:
         format_sql: true #pretty format
@@ -10,5 +11,7 @@ spring:
 #      mode: always
 #      schema-locations: classpath:org/springframework/batch/core/schema-drop-mysql.sql
   batch:
+    job:
+      enabled: false
     jdbc:
       initialize-schema: always

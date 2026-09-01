@@ -54,9 +54,10 @@ allprojects {
         implementation 'org.springframework.boot:spring-boot-starter-web'
 
         /*
-        * batch
+        * batch + instancio
         * */
         implementation 'org.springframework.boot:spring-boot-starter-batch'
+        implementation 'org.instancio:instancio-core:5.4.0'
 
         /*
         * actuator
@@ -68,6 +69,11 @@ allprojects {
         * kafka
         * */
         //implementation 'org.springframework.kafka:spring-kafka'
+
+        /*
+        * Redis
+        * */
+        implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
         /*
         * mysql / jpa
@@ -90,7 +96,7 @@ allprojects {
         implementation 'org.springframework.boot:spring-boot-testcontainers'
 
         /*
-        * test container / postgresql
+        * test container / mysql
         * */
         testImplementation 'org.testcontainers:junit-jupiter'
         testImplementation 'org.testcontainers:mysql'
@@ -101,6 +107,16 @@ allprojects {
 
         testImplementation 'org.springframework.boot:spring-boot-starter-test'
         testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+        /*
+        * batch test
+        * */
+        testImplementation 'org.springframework.batch:spring-batch-test'
+
+        /*
+        * instancio test code
+        * */
+        testImplementation 'org.instancio:instancio-core:5.4.0'
     }
 
     tasks.named('test') {
