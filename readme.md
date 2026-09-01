@@ -21,6 +21,8 @@
 
 ## 2. 메트릭 수집 파이프라인
 
+![img.png](img.png)
+
 - Actuator를 통해 WAS의 메트릭을 prometheus에게 노출한다.
 - mysqld_exporter를 통해 DB의 메트릭을 prometheus에게 노출한다.
 - 최종적으로 prometheus가 이 메트릭을 수집한다.
@@ -279,3 +281,8 @@ DB
 CPU = 20%
 Queries/sec ↓
 ```
+
+## 참고. Docker Container로 구성된 환경에 대한 자원 사용 지표(Saturation)
+
+자원 허용량에 근접하면 처리 지연이 발생하고, 자원 포화도는 그만큼 증가한다(Saturation).<br/>
+따라서, 각 컨테이너가 CPU/Memory/Network/Disk 등의 자원을 얼마나 사용하고 있는지 cAdvisor를 통해 확인한다.

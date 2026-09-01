@@ -1,6 +1,6 @@
-package com.order.controller;
+package com.health.controller;
 
-import com.order.service.OrderService;
+import com.health.service.HealthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,13 +13,13 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/health")
 @RequiredArgsConstructor
-public class OrderController {
+public class HealthController {
 
-    private final OrderService orderService;
+    private final HealthService healthService;
 
     @GetMapping("/health-check")
     public String status(){
-        return orderService.healthCheck();
+        return healthService.healthCheck();
     }
 
 }
