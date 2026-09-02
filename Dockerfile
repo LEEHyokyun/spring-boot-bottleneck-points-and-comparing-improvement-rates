@@ -12,8 +12,8 @@ FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
-COPY --from=build /app/build/libs/spring-boot-bottleneck-points-and-comparing-improvement-rates.jar spring-boot-bottleneck-points-and-comparing-improvement-rates.jar
+COPY --from=build /app/build/libs/spring-boot-bottleneck-points-and-comparing-improvement-rates-was.jar spring-boot-bottleneck-points-and-comparing-improvement-rates-was.jar
 
 VOLUME /tmp
 
-ENTRYPOINT ["java","-jar","spring-boot-bottleneck-points-and-comparing-improvement-rates.jar"]
+ENTRYPOINT ["java","-jar","spring-boot-bottleneck-points-and-comparing-improvement-rates-was.jar"]
