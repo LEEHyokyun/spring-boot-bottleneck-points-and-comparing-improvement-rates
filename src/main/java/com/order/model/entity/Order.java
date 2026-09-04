@@ -28,15 +28,20 @@ public class Order {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public static Order create(Long userId, String orderStatus) {
-
-        Order order = new Order();
-
-        order.userId = userId;
-        order.orderStatus = OrderStatus.to(orderStatus);
-        order.createdAt = LocalDateTime.now();
-        order.updatedAt = order.createdAt;
-
-        return order;
+    public void update(String orderStatus) {
+        this.orderStatus = OrderStatus.to(orderStatus);
+        this.updatedAt = LocalDateTime.now();
     }
+
+//    public static Order create(Long userId, String orderStatus) {
+//
+//        Order order = new Order();
+//
+//        order.userId = userId;
+//        order.orderStatus = OrderStatus.to(orderStatus);
+//        order.createdAt = LocalDateTime.now();
+//        order.updatedAt = order.createdAt;
+//
+//        return order;
+//    }
 }

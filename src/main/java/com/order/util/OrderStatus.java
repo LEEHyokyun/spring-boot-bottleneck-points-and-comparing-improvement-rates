@@ -29,4 +29,13 @@ public enum OrderStatus {
         return OrderStatus.NO_STATUS;
 
     }
+
+    public static String from(OrderStatus status){
+        try {
+            return status.getStatus1();
+        } catch (Exception e) {
+            log.error("[OrderStatus.from] status={}", status, e);
+            return null;
+        }
+    }
 }

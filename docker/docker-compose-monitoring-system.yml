@@ -6,6 +6,8 @@ services:
     environment:
       K6_PROMETHEUS_RW_SERVER_URL: http://prometheus:9090/api/v1/write
       K6_PROMETHEUS_RW_TREND_STATS: p(50),p(95),p(99)
+    volumes:
+      - ./scripts:/scripts:ro # volume mount
     command:
       - run
       - --out
@@ -101,3 +103,8 @@ services:
     ports:
       - "8080:8080"
     restart: unless-stopped
+
+networks:
+  default:
+    external: true
+    name: spring-boot-bottleneck-points-and-comparing-improvement-rates-network

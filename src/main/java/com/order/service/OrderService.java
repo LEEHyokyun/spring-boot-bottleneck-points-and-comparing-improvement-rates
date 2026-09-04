@@ -1,5 +1,8 @@
 package com.order.service;
 
+import com.order.model.entity.Order;
+import com.order.model.request.OrderUpdateRequest;
+import com.order.model.response.OrderUpdateResponse;
 import com.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,4 +22,12 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
 
+    @Transactional
+    public OrderUpdateResponse update(OrderUpdateRequest orderUpdateRequest) {
+
+        Order order = orderRepository.getReferenceById(orderUpdateRequest.getOrderId());
+        order.update(orderUpdateRequest.getOrderStatus());
+
+        return OrderUpdateResponse.from(order);
+    }
 }
