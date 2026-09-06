@@ -285,6 +285,209 @@ CPU = 20%
 Queries/sec ↓
 ```
 
+## 4. GC 튜닝에 따른 GC pause time 개선률 비교 및 WAS latency와의 상관관계
+
+![img_1.png](img_1.png)
+
+### 4-1. GC 튜닝별 GC Pause time 및 Overhead 비교
+
+| 구분 | 주요 설정/변경 | Saturation | Avg GC Pause | Total GC Pause | GC Overhead |
+|---|---|---:|---:|---:|---:|
+| Baseline | 기본 설정 | 약 450~460 RPS | 약 30ms | 239ms | 0.16% |
+| ParallelGCThreads 증가 | Parallel GC Thread 증가 | 약 380~400 RPS | - | 81.8ms | - |
+| MaxGCPauseMillis=100 | G1 Pause Target 조정 | 약 330~360 RPS | 45.8ms | 320ms | 0.17% |
+| G1GC Composite | ConcGCThreads=1, Adaptive IHOP Off, IHOP=30, MaxGCPauseMillis=200 | 약 450~490 RPS | 약 15ms | 81.8ms | 0.17% |
+| ZGC Composite | ZGC 적용 | 약 390~410 RPS | 약 0.4~0.6ms | 3.27ms | 1.86% |
+
+### 4-2. GC 튜닝에 따른 성능 변화 및 WAS latency와의 관계 분석
+
+- G1GC Composite는 GC Pause를 크게 낮췄지만 WAS의 포화 임계치 자체는 Baseline과 큰 차이가 없었다.
+- ZGC는 GC Pause를 극적으로 감소시켰지만 CPU/동시성 비용 등의 영향으로 WAS 임계치는 오히려 낮아졌다.
+- 따라서 **GC Pause Time 감소 = WAS Saturation 개선**으로 직접 연결된다고 볼 수 없었으며, 실제 병목은 WAS Thread, DB/HikariCP 등 전체 처리 경로를 함께 확인해야 했다.
+
+## 5. WAS 및 WAS/DB에 적용한 Semaphore 및 Blocking Queue 기반 부하 조절과 이에 따른 성능 개선 효과
+
+![img_2.png](img_2.png)
+
+## 5-1. WAS Admission Filter / Blocking Queue 단독 적용 및 개선 효과 확인
+
+`Semaphore.acquire()`처럼 Tomcat Thread 자체를 blocking시키는 방식이 아니라, 처리 슬롯을 얻지 못한 요청은 `AsyncContext`로 전환하고 Queue Worker에게 제어권을 넘겼다.
+
+```text
+                    Request
+                       │
+                       ▼
+              Servlet Filter
+                       │
+              tryAcquire()
+                 /         \
+               성공         실패
+                │             │
+                ▼             ▼
+             WAS 처리       AsyncContext
+                              │
+                              ▼
+                       BlockingQueue
+                              │
+                              ▼
+                       Worker Thread
+                              │
+                     Semaphore 확보
+                              │
+                              ▼
+                       Async Dispatch
+                              │
+                              ▼
+                         WAS 처리
+```
+
+핵심은 WAS에서의 동시처리량을 조절하여 임계지점을 향상할 수 있는가.
+
+- 주요 구현 요소
+
+| 방안 | 목적 | 확인 사항 | 결과 |
+|---|---|---|---|
+| `Semaphore.acquire()` | 동시 처리량 제한 | Tomcat Thread blocking 여부 | WAS Thread 점유 증가 가능성이 있어 최종 방식으로 채택하지 않음 |
+| `Semaphore.tryAcquire()` | 처리 가능 요청만 즉시 실행 | permit 확보/실패 비율 | 빠른 부하에서 동시 처리량 제어 가능 |
+| `BlockingQueue` | 초과 요청 대기 | Queue size / 적재 여부 | 충분히 빠른 WAS 환경에서는 Queue가 거의 형성되지 않음 |
+| `AsyncContext` | Tomcat Thread와 Queue 대기 책임 분리 | Tomcat Thread 점유 / Worker 처리 | Queue 대기 요청을 비동기화하는 핵심 수단 |
+| `WAS Queue Worker` | Queue 요청을 별도 처리 | Worker 수 / dispatch | 12개 Worker로 비동기 처리 |
+| Load Shedding | Queue까지 포화된 요청 제거 | 503 / 실패 요청 | 시스템 보호를 위한 최종 방어선 |
+
+- 적용 결과
+
+| 지표 | 기존 시스템 | WAS Semaphore/Queue 적용 | 해석 |
+|---|---:|---:|---|
+| WAS Saturation | 약 480~500 RPS | 큰 변화 없음 | WAS 자체 임계치 개선 효과 제한적 |
+| P95 | 약 20ms | 약 20~30ms | 유의미한 개선 없음 |
+| P99 | 약 30ms | 약 20~30ms | 유의미한 개선 없음 |
+| WAS Semaphore | - | 최대 450 | 빠르게 사용됨 |
+| WAS Queue | - | 거의 발생하지 않음 | WAS가 Queue 대기까지 갈 정도로 느리지 않음 |
+| Tomcat Thread | 기존 처리 | 바쁘게 동작 | 실제 처리 자체가 빠르게 이루어짐 |
+| 핵심 결과 | WAS 자체 처리 | 부하 제어 | **처리량 개선보다는 불필요한 제어가 추가될 가능성 확인** |
+
+따라서 **빠르게 처리되는 계층에서는 무조건 Queue를 만드는 것이 아니라 실제 병목이 발생하는 계층의 동시성을 제어하는 것이 중요하다.**
+
+## 5-2. WAS/DB Semaphore 추가 적용을 통한 부하 조절 효과 확인
+
+WAS에서는 요청 자체가 Servlet 계층에 도달한 상태이므로 `AsyncContext`를 이용해 요청의 제어권을 Worker에게 넘길 수 있었다.<br/>
+하지만 DB 계층에서는 이미 Worker Thread에 처리 책임 분리, Tomcat Thread의 동기식 처리로 인한 latency 증가 등을 고려하여 Semaphore 단독 적용.
+
+```text
+Traffic ↑
+   │
+   ▼
+WAS Admission
+   │
+   ▼
+DB Semaphore = 20
+   │
+   ├── permit 확보 → HikariCP
+   │
+   └── permit 실패 → Load Shedding
+                       │
+                       ▼
+                 HikariCP 경쟁 억제
+                       │
+                       ▼
+                 Pending 폭증 억제
+```
+
+DB에 도달하기 위해 동시처리요청에 대한 조절 및 이로 인한 Pending Connection / HikariCP latency 감소 효과를 파악하는 것이 핵심.
+
+- 주요 설정
+
+| 구성 | 설정 |
+|---|---:|
+| WAS Semaphore | **150** |
+| WAS Queue | **800** |
+| WAS Queue Worker | **12** |
+| DB Semaphore | **20** |
+| DB Queue | 없음 |
+| DB Admission | **AOP** |
+| DB Queue Worker | 없음 |
+| Tomcat Thread | **200 (default 유지)** |
+| HikariCP | **10 (default 유지)** |
+
+- 적용 결과
+
+| 지표 | ① 기존 시스템 | ② WAS Filter | ③ WAS Filter + DB Semaphore | 개선 효과 |
+|---|---:|---:|---:|---:|
+| **DB/WAS Saturation 시작점** | 120~123 RPS | 변화 없음 | **220~230 RPS** | **약 2배** |
+| **P95 Latency** | **1,663ms** | 약 20~30ms 수준* | **193ms** | **약 89.4% 감소** |
+| **P99 Latency** | 최대 약 **15~20초** | 약 20~30ms 수준* | 급격한 상승 억제 | **대폭 개선** |
+| **HikariCP Pending** | 최대 **189** | Queue 발생 없음 | **폭증 억제** | **안정화** |
+| **HikariCP Pool** | 10 | 10 | 10 | 변경 없음 |
+| **HikariCP Latency** | 약 676ms 이후 불안정 | - | 약 676ms 수준에서 안정 | **변동성 감소** |
+| **처리 성공률** | 임계치 초과 시 급격히 악화 | - | 약 **60~70%** | 초과 부하 제어 |
+| **JVM Heap** | 약 6~7% | 약 9~10% | 약 6~7% | 추가 부담 미미 |
+| **핵심 효과** | HikariCP 경쟁으로 병목 | WAS 보호만으로 한계 | **DB 접근 동시성 제어** | **가장 효과적** |
+
+## 5-3. 결론
+
+```scss
+Request
+   │
+   ▼
+┌─────────────────────────────────────────────┐
+│ WAS Admission                              │
+│                                             │
+│  Semaphore 150                             │
+│       │                                     │
+│       ├── 성공 ────────────────┐            │
+│       │                        │            │
+│       └── 실패 → Queue 800     │            │
+│                    │           │            │
+│                 Worker 12      │            │
+│                    │           │            │
+│              Semaphore 확보 ──┘            │
+└────────────────────┬────────────────────────┘
+                     │
+                     ▼
+                Spring MVC
+                     │
+                     ▼
+┌─────────────────────────────────────────────┐
+│ DB Admission                                │
+│                                             │
+│  DB Semaphore 20                            │
+│       │                                     │
+│       ├── 성공 ────────────────┐            │
+│       │                        │            │
+│       └── 실패 → Load Shedding │            │
+└────────────────────┬───────────┘            │
+                     │                        │
+                     ▼                        │
+                HikariCP 10                   │
+                     │                        │
+               Connection 획득                │
+                     │                        │
+                     ▼                        │
+                   MySQL                      │
+                     │                        │
+                     ▼                        │
+               Connection 반납                │
+                     │                        │
+                     ▼                        │
+              DB Semaphore 해제              │
+                                              │
+                     ◄────────────────────────┘
+                     │
+                     ▼
+              HTTP Response
+                     │
+                     ▼
+             WAS Semaphore 해제
+```
+
+> 별도의 Redis/Kafka 등의 인프라를 추가하지 않고도,
+> - DB/WAS Saturation 시작점: **120~123 → 220~230 RPS**
+> - 약 **2배 수준의 임계치 향상**
+> - P95: **1,663ms → 193ms**
+> - 약 **89.4% latency 감소**
+> - HikariCP Pending 최대 **189 → 폭증 억제**
+> - HikariCP Pool **10개 유지**
+
 ## 참고. Docker Container로 구성된 환경에 대한 자원 사용 지표(Saturation)
 
 자원 허용량에 근접하면 처리 지연이 발생하고, 자원 포화도는 그만큼 증가한다(Saturation).<br/>
