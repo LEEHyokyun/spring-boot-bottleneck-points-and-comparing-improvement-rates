@@ -481,7 +481,7 @@ Request
 ```
 
 > 별도의 Redis/Kafka 등의 인프라를 추가하지 않고도,
-> - DB/WAS Saturation 시작점: **120~123 → 220~230 RPS**
+> - DB/WAS Saturation 시작점: **120 - 123 → 220 - 230 RPS**
 > - 약 **2배 수준의 임계치 향상**
 > - P95: **1,663ms → 193ms**
 > - 약 **89.4% latency 감소**
