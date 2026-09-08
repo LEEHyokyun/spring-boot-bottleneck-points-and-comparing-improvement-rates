@@ -53,7 +53,7 @@ k6 ──────────────► Spring Boot ──────�
                          [ Load Test Pipeline ]
 ┌─────────────┐          ┌──────────────────┐
 │     k6      │─────────►│    L7 Gateway    │
-│ 1,000 RPS   │          │     Nginx        │
+│             │          │     Nginx        │
 └─────────────┘          └────────┬─────────┘
                                   │
                                   │ HTTP
@@ -168,32 +168,29 @@ WAS와 DB에서의 트랜잭션 처리량 및 이로 인한 Connection 점유율
 
 ## 3. Normal 상태를 표준적 자원 상태에 기반하여 Abnormally/Subnormally 정립
 
-1,000 RPS 규모의 트래픽이 발생하였다고 가정하자.
+테스트를 진행하기 앞서, 시스템의 임계치를 확인하기 위해 Stress test 시나리오를 구성한다.
 
 ```scss
 k6
-1,000 RPS
 │
 ▼
 L7
-Request: 1,000 req/s
+Request: 500 ~ 600 req/s
 Upstream latency: 50ms
 │
 ▼
 WAS
 Tomcat: 50/200
-Hikari: 10/30
+Hikari: 10/10
 Pending: 0
 │
 ▼
 DB
 CPU: 30%
 Threads Running: 8
-Queries/sec: 950
 ```
 
-일반적인 Tomcat Thread(200개) 및 Hikari Pool(20~30)의 환경을 기반으로,<br/>
-CPU 사용량을 30% 내외 수준으로 가정하고, load test를 진행하면서 발생하는 병목을 계층별로 분석하고 개선안을 적용한다.
+현재 시스템의 기본 인프라인 Tomcat Thread(200개), Hikari Pool(10)의 상태에서 부하를 늘려가며 Saturation 지점을 먼저 확인한다.
 
 ## 3-1. Abnormally
 
@@ -207,7 +204,6 @@ Tomcat Thread 및 Hikari Pool 점유율이 높아지고 DB Connection을 위한 
 
 ```scss
 k6
-1,000 RPS
 │
 ▼
 L7
@@ -217,7 +213,7 @@ Upstream latency ↑
 ▼
 WAS
 Tomcat Active ↑
-Hikari Active → 30/30
+Hikari Active → 10/10
 Hikari Pending ↑
 │
 ▼
@@ -237,8 +233,7 @@ DB의 병목은 Nginx(L7) 및 WAS 계층에서의 수치를 악화시킬 수 있
 이때, WAS 병목과 달리 DB Exporter를 통해 감지한 CPU 및 자원 사용량을 확인하여 병목 원인을 특정할 수 있다.
 
 ```scss
-k6
-1,000 RPS
+k6 Traffics
       │
       ▼
       L7
@@ -248,7 +243,7 @@ k6
       ▼
       WAS
       Tomcat Active ↑
-      Hikari Active → 30/30
+      Hikari Active → 10/10
       Hikari Pending ↑
       │
       ▼
@@ -262,12 +257,10 @@ k6
 
 > WAS의 병목으로 인해 DB의 Activity를 오히려 감소한 경우
 
-WAS의 포화로 인해 DB 계층까지 처리가 이어지지 않아 DB의 모니터링 지표가 수치적으로는 좋아질 수 있다.<br/>
-하지만, Activity의 감소를 의미하는 것일뿐 병목 개선을 의미하지는 않는다.
+WAS의 포화로 인해 DB 계층까지 처리가 이어지지 않아 DB의 모니터링 지표가 수치적으로는 좋아질 수 있다.
 
 ```scss
 k6
-1,000 RPS
 │
 ▼
 L7
@@ -284,6 +277,8 @@ DB
 CPU = 20%
 Queries/sec ↓
 ```
+
+하지만, Activity의 감소를 의미하는 것일뿐 병목 개선을 의미하지는 않는다.
 
 ## 4. GC 튜닝에 따른 GC pause time 개선률 비교 및 WAS latency와의 상관관계
 
@@ -411,17 +406,17 @@ DB에 도달하기 위해 동시처리요청에 대한 조절 및 이로 인한 
 
 - 적용 결과
 
-| 지표 | ① 기존 시스템 | ② WAS Filter | ③ WAS Filter + DB Semaphore | 개선 효과 |
-|---|---:|---:|---:|---:|
-| **DB/WAS Saturation 시작점** | 120~123 RPS | 변화 없음 | **220~230 RPS** | **약 2배** |
+| 지표 | ① 기존 시스템 | ② WAS Filter | ③ WAS Filter + DB Semaphore |          개선 효과 |
+|---|---:|---:|---:|---------------:|
+| **DB/WAS Saturation 시작점** | 120~123 RPS | 변화 없음 | **220~230 RPS** |       **약 2배** |
 | **P95 Latency** | **1,663ms** | 약 20~30ms 수준* | **193ms** | **약 89.4% 감소** |
-| **P99 Latency** | 최대 약 **15~20초** | 약 20~30ms 수준* | 급격한 상승 억제 | **대폭 개선** |
-| **HikariCP Pending** | 최대 **189** | Queue 발생 없음 | **폭증 억제** | **안정화** |
-| **HikariCP Pool** | 10 | 10 | 10 | 변경 없음 |
-| **HikariCP Latency** | 약 676ms 이후 불안정 | - | 약 676ms 수준에서 안정 | **변동성 감소** |
-| **처리 성공률** | 임계치 초과 시 급격히 악화 | - | 약 **60~70%** | 초과 부하 제어 |
-| **JVM Heap** | 약 6~7% | 약 9~10% | 약 6~7% | 추가 부담 미미 |
-| **핵심 효과** | HikariCP 경쟁으로 병목 | WAS 보호만으로 한계 | **DB 접근 동시성 제어** | **가장 효과적** |
+| **P99 Latency** | 최대 약 **15~20초** | 약 20~30ms 수준* | 급격한 상승 억제 | **약 96.7% 감소** |
+| **HikariCP Pending** | 최대 **189** | Queue 발생 없음 | **폭증 억제** |        **안정화** |
+| **HikariCP Pool** | 10 | 10 | 10 |          변경 없음 |
+| **HikariCP Latency** | 약 676ms 이후 불안정 | - | 약 676ms 수준에서 안정 |     **변동성 감소** |
+| **처리 성공률** | 임계치 초과 시 급격히 악화 | - | 약 **60~70%** |       초과 부하 제어 |
+| **JVM Heap** | 약 6~7% | 약 9~10% | 약 6~7% |       추가 부담 미미 |
+| **핵심 효과** | HikariCP 경쟁으로 병목 | WAS 보호만으로 한계 | **DB 접근 동시성 제어** |     **가장 효과적** |
 
 ## 5-3. 결론
 
